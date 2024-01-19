@@ -1,1 +1,1 @@
-# P2---MCTS-Tic-Tac-Toe
+# P2_MCTS-Tic-Tac-Toe
