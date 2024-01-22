@@ -1,102 +1,42 @@
-# mcts_vanilla.py
-
 from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
 from math import sqrt, log
 
 num_nodes = 1000
-explore_faction = 2.0
+explore_factor = 1.0
 
-def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
-    """ Traverses the tree until the end criterion are met.
-    e.g. find the best expandable node (node with untried action) if it exist,
-    or else a terminal node
-
-    Args:
-        node:       A tree node from which the search is traversing.
-        board:      The game setup.
-        state:      The state of the game.
-        identity:   The bot's identity, either 1 or 2
-
-    Returns:
-        node: A node from which the next stage of the search can proceed.
-        state: The state associated with that node
-
-    """
+def traverse_nodes(node, board, state, bot_identity):
     while not board.is_ended(state) and not node.untried_actions and node.child_nodes:
         if node.untried_actions:
-            # If there are untried actions, expand the tree
             return expand_leaf(node, board, state)
         else:
-            # Calculate UCB values for each child node
-            ucb_values = {a: ucb(node.child_nodes[a], False) for a in node.child_nodes}
-
-            # Select the action with the maximum UCB value
-            action = max(ucb_values, key=ucb_values.get)
-
-            # Move to the selected child node
+            action = max(node.child_nodes, key=lambda a: ucb(node.child_nodes[a], False))
             node = node.child_nodes[action]
             state = board.next_state(state, action)
 
     return node, state
 
-def expand_leaf(node: MCTSNode, board: Board, state):
-    """ Adds a new leaf to the tree by creating a new child node for the given node (if it is non-terminal).
-
-    Args:
-        node:   The node for which a child will be added.
-        board:  The game setup.
-        state:  The state of the game.
-
-    Returns:
-        node: The added child node
-        state: The state associated with that node
-
-    """
+def expand_leaf(node, board, state):
     if not node.untried_actions:
-        # No untried actions, return the current node and state
         return node, state
 
-    # Choose an untried action
     action = choice(node.untried_actions)
-
-    # Remove the chosen action from untried actions
     node.untried_actions.remove(action)
 
-    # Create a new child node for the chosen action
     new_node = MCTSNode(parent=node, parent_action=action, action_list=board.legal_actions(state))
-
-    # Update the child nodes dictionary
     node.child_nodes[action] = new_node
-
-    # Transition to the next state
     state = board.next_state(state, action)
 
     return new_node, state
 
 def rollout(board, state):
-    """ Given the state of the game, the rollout plays out the remainder randomly.
-
-    Args:
-        board:  The game setup.
-        state:  The state of the game.
-
-    Returns:
-        state: The terminal game state
-    """
     while not board.is_ended(state):
         action = choice(board.legal_actions(state))
         state = board.next_state(state, action)
     return state
 
 def backpropagate(node, won):
-    """ Navigates the tree from a leaf node to the root, updating the win and visit count of each node along the path.
-
-    Args:
-        node:   A leaf node.
-        won:    An indicator of whether the bot won or lost the game.
-    """
     while node is not None:
         node.visits += 1
         if won:
@@ -104,72 +44,38 @@ def backpropagate(node, won):
         node = node.parent
 
 def ucb(node, is_opponent):
-    """ Calculates the UCB value for the given node from the perspective of the bot
-
-    Args:
-        node:   A node.
-        is_opponent: A boolean indicating whether or not the last action was performed by the MCTS bot
-    Returns:
-        The value of the UCB function for the given node
-    """
     if node.visits == 0:
         return float('inf')
 
     exploitation = node.wins / node.visits
-    exploration = explore_faction * sqrt(log(node.parent.visits) / node.visits)
+    exploration = explore_factor * sqrt(log(node.parent.visits) / node.visits)
 
     return exploitation + exploration if not is_opponent else 1 - exploitation + exploration
 
 def get_best_action(root_node):
-    """ Selects the best action from the root node in the MCTS tree
-
-    Args:
-        root_node:   The root node
-    Returns:
-        action: The best action from the root node
-    """
     if not root_node.child_nodes:
         return None
 
     return max(root_node.child_nodes, key=lambda a: root_node.child_nodes[a].visits)
 
 def is_win(board, state, identity_of_bot):
-    # checks if state is a win state for identity_of_bot
     outcome = board.points_values(state)
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
 def think(board, current_state):
-    """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
-
-    Args:
-        board:  The game setup.
-        current_state:  The current state of the game.
-
-    Returns:
-        The action to be taken from the current state
-    """
-    bot_identity = board.current_player(current_state)  # 1 or 2
+    bot_identity = board.current_player(current_state)
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
 
     for _ in range(num_nodes):
         state = current_state
         node = root_node
 
-        # Selection and Expansion
         node, state = traverse_nodes(node, board, state, bot_identity)
-
-        # Expansion
         node, state = expand_leaf(node, board, state)
-
-        # Rollout
         rollout_state = rollout(board, state)
-
-        # Backpropagation
         backpropagate(node, is_win(board, rollout_state, bot_identity))
 
-    # Return the action with the highest visit count
     best_action = get_best_action(root_node)
-    
     print(f"Action chosen: {best_action}")
     return best_action
