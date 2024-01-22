@@ -14,6 +14,11 @@ are in the /src folder):
 - $ python p2_play.py human human
 - python p2_play.py PLAYER1 PLAYER2, where either can be ‘human’,
 
+The game can also be executed in a simulation mode, where there is no rendering. This is useful to
+test how one bot plays against another. To execute this type of simulation, you can run the following
+command:
+- $ python p2_sim.py PLAYER1 PLAYER2
+- python p2_sim.py PLAYER1 PLAYER2
 ‘mcts_vanilla’, ‘mcts_modified’, ‘random_bot’, ‘rollout_bot’.
 
 When you run this code you should see a textual display of the board and a prompt for which board
