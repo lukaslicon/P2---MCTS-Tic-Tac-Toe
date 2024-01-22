@@ -47,9 +47,17 @@ last_action = None
 current_player = player1
 while not board.is_ended(state):
     print(board.display(state, last_action))
-    print("Player "+str(board.current_player(state)))
+    print("Player " + str(board.current_player(state)))
     last_action = current_player(board, state)
     state = board.next_state(state, last_action)
     current_player = player1 if current_player == player2 else player2
+
 print("Finished!")
-print(board.points_values(state))
+print(board.display(state, last_action))
+
+# Check who won and print the result
+winners = board.win_values(state)
+if winners:
+    print(board.winner_message(winners))
+else:
+    print("It's a draw!")
